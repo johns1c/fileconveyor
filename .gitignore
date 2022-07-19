@@ -5,3 +5,5 @@ build
 # Python's precompiled files
 *.pyc
 *.pyo
+# Notepad ++ editor backups
+*.bak
