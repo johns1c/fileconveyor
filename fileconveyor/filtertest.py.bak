@@ -7,7 +7,7 @@ __date__ = "$Date$"
 __license__ = "GPL"
 
 
-from .filter import *
+from filter import *
 import unittest
 
 
@@ -195,20 +195,20 @@ class TestMatching(unittest.TestCase):
         }
         filter = Filter(conditions)
         # Meets minimum size
-        statfunc = lambda filepath: fakestatfunc(501)
+        statfunc = lambda filepath: fakestatfunc(501L)
         self.assertTrue(filter.matches(filepath, statfunc))
         # Does not meet minimum size
-        statfunc = lambda filepath: fakestatfunc(499)
+        statfunc = lambda filepath: fakestatfunc(499L)
         self.assertFalse(filter.matches(filepath, statfunc))
 
         # Maximium size
         conditions["size"]["conditionType"] = "maximum"
         filter.set_conditions(conditions)
         # Meets maximum size
-        statfunc = lambda filepath: fakestatfunc(499)
+        statfunc = lambda filepath: fakestatfunc(499L)
         self.assertTrue(filter.matches(filepath, statfunc))
         # Does not meet maximum size
-        statfunc = lambda filepath: fakestatfunc(500)
+        statfunc = lambda filepath: fakestatfunc(500L)
         self.assertFalse(filter.matches(filepath, statfunc))
 
         # Minimium size

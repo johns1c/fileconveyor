@@ -7,7 +7,7 @@ __date__ = "$Date$"
 __license__ = "GPL"
 
 
-from .fsmonitor import *
+from fsmonitor import *
 import pyinotify
 from pyinotify import WatchManager, \
                       ThreadedNotifier, \
@@ -50,7 +50,7 @@ class FSMonitorInotify(FSMonitor):
     def __fsmonitor_event_to_inotify_event(self, event_mask):
         """map an FSMonitor event to an inotify event"""
         inotify_event_mask = 0
-        for fsmonitor_event_mask in list(self.__class__.EVENTMAPPING.keys()):
+        for fsmonitor_event_mask in self.__class__.EVENTMAPPING.keys():
             if event_mask & fsmonitor_event_mask:
                 inotify_event_mask = inotify_event_mask | self.__class__.EVENTMAPPING[fsmonitor_event_mask]
         return inotify_event_mask
@@ -60,7 +60,7 @@ class FSMonitorInotify(FSMonitor):
         """map a pathname (as received in an inotify event) to its
         corresponding monitored path
         """
-        for monitored_path in list(self.monitored_paths.keys()):
+        for monitored_path in self.monitored_paths.keys():
             if os.path.commonprefix([path, monitored_path]) == monitored_path:
                 return monitored_path
 
@@ -72,14 +72,14 @@ class FSMonitorInotify(FSMonitor):
         event_mask_inotify = self.__fsmonitor_event_to_inotify_event(event_mask)
         try:
             wdd = self.wm.add_watch(path, event_mask_inotify, proc_fun=self.process_event, rec=True, auto_add=True, quiet=False)
-        except WatchManagerError as e:
-            raise FSMonitorError("Could not monitor '%s', reason: %s" % (path, e))
+        except WatchManagerError, e:
+            raise FSMonitorError, "Could not monitor '%s', reason: %s" % (path, e)
         # Verify that inotify is able to monitor this directory and all of its
         # subdirectories.
         for monitored_path in wdd:
             if wdd[monitored_path] < 0:
                 code = wdd[monitored_path]
-                raise FSMonitorError("Could not monitor %s (%d)" % (monitored_path, code))
+                raise FSMonitorError, "Could not monitor %s (%d)" % (monitored_path, code)
         self.monitored_paths[path] = MonitoredPath(path, event_mask, wdd)
         self.monitored_paths[path].monitoring = True
 
@@ -99,7 +99,7 @@ class FSMonitorInotify(FSMonitor):
 
     def __remove_dir(self, path):
         """override of FSMonitor.__remove_dir()"""
-        if path in list(self.monitored_paths.keys()):
+        if path in self.monitored_paths.keys():
             self.wm.rm_watch(path, rec=True, quiet=True)
             del self.monitored_paths[path]
 
@@ -134,7 +134,7 @@ class FSMonitorInotify(FSMonitor):
         self.lock.release()
 
         # Stop monitoring each monitored path.
-        for path in list(self.monitored_paths.keys()):
+        for path in self.monitored_paths.keys():
             self.__remove_dir(path)
 
 

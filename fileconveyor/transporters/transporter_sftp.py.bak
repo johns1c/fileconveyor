@@ -1,4 +1,4 @@
-from .transporter import *
+from transporter import *
 from storages.backends.sftpstorage import SFTPStorage
 
 
@@ -16,7 +16,7 @@ class TransporterSFTP(Transporter):
         Transporter.__init__(self, settings, callback, error_callback, parent_logger)
 
         # Fill out defaults if necessary.
-        configured_settings = Set(list(self.settings.keys()))
+        configured_settings = Set(self.settings.keys())
         if not "port" in configured_settings:
             self.settings["port"] = 22
         if not "path" in configured_settings:
@@ -36,5 +36,5 @@ class TransporterSFTP(Transporter):
         self.storage._start_connection()
         try:
             self.storage._start_connection()
-        except Exception as e:
+        except Exception, e:
             raise ConnectionError(e)

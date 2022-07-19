@@ -1,21 +1,17 @@
 import logging
 import logging.handlers
-import queue
+import Queue
 import os
 import stat
 import threading
 import time
 import sys
 import sqlite3
-from collections  import UserList
+from UserList import UserList
 import os.path
 import signal
 
 
-import os
-if 'FILE_CONVEYOR_PATH' in os.environ :
-    FILE_CONVEYOR_PATH = os.path.realpath(os.environ['FILE_CONVEYOR_PATH'] )
-else :
 FILE_CONVEYOR_PATH = os.path.abspath(os.path.dirname(__file__))
 
 
@@ -25,15 +21,15 @@ if not 'DJANGO_SETTINGS_MODULE' in os.environ:
     os.environ['DJANGO_SETTINGS_MODULE'] = 'fileconveyor.django_settings'
 
 
-from .settings import *
-from .config import *
-from .persistent_queue import *
-from .persistent_list import *
-from .fsmonitor import *
-from .filter import *
-from .processors.processor import *
-from .transporters.transporter import Transporter, ConnectionError
-from .daemon_thread_runner import *
+from settings import *
+from config import *
+from persistent_queue import *
+from persistent_list import *
+from fsmonitor import *
+from filter import *
+from processors.processor import *
+from transporters.transporter import Transporter, ConnectionError
+from daemon_thread_runner import *
 
 
 # Copied from django.utils.functional
@@ -119,22 +115,17 @@ class Arbitrator(threading.Thread):
         # transporters First calculate the value for the "symlinkWithin"
         # setting.
         source_paths = []
-        for source in list(self.config.sources.values()):
+        for source in self.config.sources.values():
             source_paths.append(source["scan_path"])
         symlinkWithin = ":".join(source_paths)
         # Then set it for every server that uses this transporter.
-        for name in list(self.config.servers.keys()):
+        for name in self.config.servers.keys():
             if self.config.servers[name]["transporter"] == "symlink_or_copy":
                 self.config.servers[name]["settings"]["symlinkWithin"] = symlinkWithin
 
-            print( f'Server settings for {name}==========================' ) 
-            print( self.config.servers[name]["settings"] )          
-            print( f'=================== {name}==========================' ) 
-            print ( '' , flush=True) 
-
         # Verify that all referenced processors are available.
         processors_not_found = 0
-        for source in list(self.config.rules.keys()):
+        for source in self.config.rules.keys():
             for rule in self.config.rules[source]:
                 if not rule["processorChain"] is None:
                     for processor in rule["processorChain"]:
@@ -146,7 +137,7 @@ class Arbitrator(threading.Thread):
 
         # Verify that all referenced transporters are available.
         transporters_not_found = 0
-        for server in list(self.config.servers.keys()):
+        for server in self.config.servers.keys():
             transporter_name = self.config.servers[server]["transporter"]
             transporter_class = self._import_transporter(transporter_name)
             if not transporter_class:
@@ -156,7 +147,7 @@ class Arbitrator(threading.Thread):
 
         # Verify that each of the servers works.
         successful_server_connections = 0
-        for server in list(self.config.servers.keys()):
+        for server in self.config.servers.keys():
             transporter = self.__create_transporter(server)
             if transporter:
                 successful_server_connections += 1
@@ -176,26 +167,26 @@ class Arbitrator(threading.Thread):
         # Create one initial transporter per pool, possible other transporters
         # will be created on-demand.
         self.transporters = {}
-        for server in list(self.config.servers.keys()):
+        for server in self.config.servers.keys():
             self.transporters[server] = []
             self.logger.warning("Setup: created transporter pool for the '%s' server." % (server))
 
         # Collecting all necessary metadata for each rule.
         self.rules = []
-        for source in list(self.config.sources.values()):
+        for source in self.config.sources.values():
             # Create a function to prepend the source's scan path to another
             # path.
             prepend_scan_path = lambda path: os.path.join(source["scan_path"], path)
-            if source["name"] in self.config.rules:
+            if self.config.rules.has_key(source["name"]):
                 for rule in self.config.rules[source["name"]]:
                     if rule["filterConditions"] is None:
                         filter = None
                     else:
-                        if "paths" in rule["filterConditions"]:
+                        if rule["filterConditions"].has_key("paths"):
                             # Prepend the source's scan path (effectively the
                             # "root path") for a rule to each of the paths in
                             # the "paths" condition in the filter.
-                            paths = list(map(prepend_scan_path, rule["filterConditions"]["paths"].split(":")))
+                            paths = map(prepend_scan_path, rule["filterConditions"]["paths"].split(":"))
                             rule["filterConditions"]["paths"] = ":".join(paths)
                         filter = Filter(rule["filterConditions"])
 
@@ -225,14 +216,14 @@ class Arbitrator(threading.Thread):
         self.files_to_delete = PersistentList("files_to_delete_list", PERSISTENT_DATA_DB)
         num_files_to_delete = len(self.files_to_delete)
         self.logger.warning("Setup: initialized 'files_to_delete' persistent list, contains %d items." % (num_files_to_delete))
-        self.discover_queue  = queue.Queue()
-        self.filter_queue    = queue.Queue()
-        self.process_queue   = queue.Queue()
+        self.discover_queue  = Queue.Queue()
+        self.filter_queue    = Queue.Queue()
+        self.process_queue   = Queue.Queue()
         self.transport_queue = {}
-        for server in list(self.config.servers.keys()):
+        for server in self.config.servers.keys():
             self.transport_queue[server] = AdvancedQueue()
-        self.db_queue        = queue.Queue()
-        self.retry_queue     = queue.Queue()
+        self.db_queue        = Queue.Queue()
+        self.retry_queue     = Queue.Queue()
         self.remaining_transporters = {}
 
         # Move files from the 'files_in_pipeline' persistent list to the 
@@ -253,7 +244,7 @@ class Arbitrator(threading.Thread):
 
         # Create connection to synced files DB.
         self.dbcon = sqlite3.connect(SYNCED_FILES_DB)
-        self.dbcon.text_factory = str # This is the default, but we set it explicitly, just to be sure.
+        self.dbcon.text_factory = unicode # This is the default, but we set it explicitly, just to be sure.
         self.dbcur = self.dbcon.cursor()
         self.dbcur.execute("CREATE TABLE IF NOT EXISTS synced_files(input_file text, transported_file_basename text, url text, server text)")
         self.dbcur.execute("CREATE UNIQUE INDEX IF NOT EXISTS file_unique_per_server ON synced_files (input_file, server)")
@@ -268,7 +259,7 @@ class Arbitrator(threading.Thread):
         self.logger.warning("Setup: initialized FSMonitor.")
 
         # Monitor all sources' scan paths.
-        for source in list(self.config.sources.values()):
+        for source in self.config.sources.values():
             self.logger.info("Setup: monitoring '%s' (%s)." % (source["scan_path"], source["name"]))
             self.fsmonitor.add_dir(source["scan_path"], FSMonitor.CREATED | FSMonitor.MODIFIED | FSMonitor.DELETED)
 
@@ -302,7 +293,7 @@ class Arbitrator(threading.Thread):
                 # because files are modified, processed and transported much
                 # slower than that.
                 time.sleep(0.2)
-        except Exception as e:
+        except Exception, e:
             self.logger.exception("Unhandled exception of type '%s' detected, arguments: '%s'." % (e.__class__.__name__, e.args))
             self.logger.error("Stopping File Conveyor to ensure the application is stopped in a clean manner.")
             os.kill(os.getpid(), signal.SIGTERM)
@@ -320,7 +311,7 @@ class Arbitrator(threading.Thread):
         self.logger.info("Final sync of discover queue to pipeline queue made.")
 
         # Stop the transporters and wait for their threads to end.
-        for server in list(self.transporters.keys()):
+        for server in self.transporters.keys():
             if len(self.transporters[server]):
                 for transporter in self.transporters[server]:
                     transporter.stop()
@@ -465,7 +456,7 @@ class Arbitrator(threading.Thread):
                     # If the file was deleted, also delete the file on all
                     # servers.
                     self.lock.acquire()
-                    servers = list(rule["destinations"].keys())
+                    servers = rule["destinations"].keys()
                     self.remaining_transporters[input_file + str(event) + repr(rule)] = servers
                     if event == FSMonitor.DELETED:
                         # Look up the transported file's base name. This might
@@ -566,9 +557,9 @@ class Arbitrator(threading.Thread):
             # Start the processor chain.
             document_root = None
             base_path     = None
-            if "document_root" in self.config.sources[rule["source"]]:
+            if self.config.sources[rule["source"]].has_key("document_root"):
                 document_root = self.config.sources[rule["source"]]["document_root"]
-            if "base_path" in self.config.sources[rule["source"]]:
+            if self.config.sources[rule["source"]].has_key("base_path"):
                 base_path = self.config.sources[rule["source"]]["base_path"]
             processor_chain = self.processor_chain_factory.make_chain_for(input_file,
                                                                           rule["processorChain"],
@@ -591,7 +582,7 @@ class Arbitrator(threading.Thread):
 
 
     def __process_transport_queues(self):
-        for server in list(self.config.servers.keys()):
+        for server in self.config.servers.keys():
             processed = 0
 
             while processed < QUEUE_PROCESS_BATCH_SIZE and self.transport_queue[server].qsize() > 0:
@@ -620,7 +611,7 @@ class Arbitrator(threading.Thread):
 
                 # Get the additional settings from the rule.
                 dst_parent_path = ""
-                if "path" in rule["destinations"][server]:
+                if rule["destinations"][server].has_key("path"):
                     dst_parent_path = rule["destinations"][server]["path"]
 
                 (id, place_in_queue, transporter) = self.__get_transporter(server)
@@ -689,7 +680,7 @@ class Arbitrator(threading.Thread):
                 try:
                     self.dbcur.execute("INSERT INTO synced_files VALUES(?, ?, ?, ?)", (input_file, transported_file_basename, url, server))
                     self.dbcon.commit()
-                except sqlite3.IntegrityError as e:
+                except sqlite3.IntegrityError, e:
                     self.logger.critical("Database integrity error: %s. Duplicate key: input_file = '%s', server = '%s'." % (e, input_file, server))
             elif event == FSMonitor.MODIFIED:
                 self.dbcur.execute("SELECT COUNT(*) FROM synced_files WHERE input_file=? AND server=?", (input_file, server))
@@ -765,7 +756,7 @@ class Arbitrator(threading.Thread):
                 # active environments.
                 try:
                     self.remaining_transporters[key].remove(server)
-                except ValueError as e:
+                except ValueError, e:
                     pass
 
             # Only remove the file from the pipeline if no transporters are
@@ -867,7 +858,7 @@ class Arbitrator(threading.Thread):
     def __allow_retry(self):
         num_failed_files = len(self.failed_files)
         should_retry = self.last_retry + RETRY_INTERVAL < time.time()
-        pipeline_queue_almost_empty = self.pipeline_queue.size < MAX_FILES_IN_PIPELINE
+        pipeline_queue_almost_empty = self.pipeline_queue < MAX_FILES_IN_PIPELINE
         
         if num_failed_files > 0 and (should_retry or pipeline_queue_almost_empty):
             failed_items = []
@@ -935,7 +926,7 @@ class Arbitrator(threading.Thread):
         # Attempt to create an instance of the transporter.
         try:
             transporter = transporter_class(settings, self.transporter_callback, self.transporter_error_callback, "Arbitrator")
-        except ConnectionError as e:
+        except ConnectionError, e:
             self.logger.error("Could not start transporter '%s'. Error: '%s'." % (transporter_name, e))
             return False
         else:
@@ -968,10 +959,10 @@ class Arbitrator(threading.Thread):
         input_file = event_path
 
         if CALLBACKS_CONSOLE_OUTPUT:
-            print(( """FSMONITOR CALLBACK FIRED:
+            print """FSMONITOR CALLBACK FIRED:
                     input_file='%s'
                     event=%d"
-                    discovered_through=%s""" % (input_file, event, discovered_through) ))
+                    discovered_through=%s""" % (input_file, event, discovered_through)
 
         # The file may have already been deleted!
         deleted = event == FSMonitor.DELETED
@@ -983,7 +974,7 @@ class Arbitrator(threading.Thread):
                 try:
                     if stat.S_ISDIR(os.stat(event_path)[stat.ST_MODE]):
                         return
-                except OSError as e:
+                except OSError, e:
                     # The file (or directory, we can't be sure at this point)
                     # does no longer exist (despite the os.path.exists() check
                     # above!): it must *just* have been deleted.
@@ -1001,12 +992,12 @@ class Arbitrator(threading.Thread):
 
     def processor_chain_callback(self, input_file, output_file, event, rule, processed_for_server):
         if CALLBACKS_CONSOLE_OUTPUT:
-            print(( """PROCESSOR CHAIN CALLBACK FIRED:
+            print """PROCESSOR CHAIN CALLBACK FIRED:
                     input_file='%s'
                     (curried): event=%d
                     (curried): rule='%s'
                     (curried): processed_for_server='%s'
-                    output_file='%s'""" % (input_file, event, rule["label"], processed_for_server, output_file)))
+                    output_file='%s'""" % (input_file, event, rule["label"], processed_for_server, output_file)
 
         # Decrease number of running processor chains.
         self.lock.acquire()
@@ -1017,7 +1008,7 @@ class Arbitrator(threading.Thread):
         # should be synced to all destinations. Else, it should only be synced
         # to the server it was processed for.
         if processed_for_server == Arbitrator.PROCESSED_FOR_ANY_SERVER:
-            for server in list(rule["destinations"].keys()):
+            for server in rule["destinations"].keys():
                 # Add to transport queue.
                 self.lock.acquire()
                 self.transport_queue[server].put((input_file, event, rule, processed_for_server, output_file))
@@ -1033,9 +1024,9 @@ class Arbitrator(threading.Thread):
 
     def processor_chain_error_callback(self, input_file, event):
         if CALLBACKS_CONSOLE_OUTPUT:
-            print(("""PROCESSOR CHAIN ERROR CALLBACK FIRED:
+            print """PROCESSOR CHAIN ERROR CALLBACK FIRED:
                     input_file='%s'
-                    (curried): event=%d""" % (input_file, event)))
+                    (curried): event=%d""" % (input_file, event)
 
         # Add to retry queue.
         self.lock.acquire()
@@ -1050,7 +1041,7 @@ class Arbitrator(threading.Thread):
         transported_file = dst
 
         if CALLBACKS_CONSOLE_OUTPUT:
-            print(( """TRANSPORTER CALLBACK FIRED:
+            print """TRANSPORTER CALLBACK FIRED:
                     (curried): input_file='%s'
                     (curried): event=%d
                     (curried): rule='%s'
@@ -1058,7 +1049,7 @@ class Arbitrator(threading.Thread):
                     output_file='%s'
                     transported_file='%s'
                     url='%s'
-                    server='%s'""" % (input_file, event, rule["label"], processed_for_server, output_file, transported_file, url, server) ))
+                    server='%s'""" % (input_file, event, rule["label"], processed_for_server, output_file, transported_file, url, server)
 
         # Add to db queue.
         self.lock.acquire()
@@ -1070,10 +1061,10 @@ class Arbitrator(threading.Thread):
 
     def transporter_error_callback(self, src, dst, action, input_file, event):
         if CALLBACKS_CONSOLE_OUTPUT:
-            print(("""TRANSPORTER ERROR CALLBACK FIRED:
+            print """TRANSPORTER ERROR CALLBACK FIRED:
                     (curried): input_file='%s'
                     (curried): event=%d""" % (input_file, event)
-                   ))
+
         self.retry_queue.put((input_file, event))
 
 
@@ -1114,9 +1105,9 @@ class Arbitrator(threading.Thread):
         processor_class = None
         module = None
         alternatives = [processor]
-        alternatives.append('%s%s' % ('processors.', processor))
-        alternatives.append('%s%s' % ('.processors.', processor))
-        alternatives.append('%s%s' % ('fileconveyor.processors.', processor))
+        default_prefix = 'processors.' # Not 'fileconveyor.processors.'!
+        if not processor.startswith(default_prefix):
+            alternatives.append('%s%s' % (default_prefix, processor))
         for processor_name in alternatives:
             (modulename, classname) = processor_name.rsplit(".", 1)
             try:
@@ -1124,7 +1115,7 @@ class Arbitrator(threading.Thread):
             except ImportError:
                 pass
         if not module:
-            msg = "The processor module '%s' could not be found." % modulename
+            msg = "The processor module '%s' could not be found." % processor
             if len(alternatives) > 1:
                 msg = '%s Tried (%s)' % (msg, ', '.join(alternatives))
             self.logger.error(msg)
@@ -1149,16 +1140,12 @@ class Arbitrator(threading.Thread):
         transporter_class = None
         module = None
         alternatives = [transporter]
-        default_prefix  = 'transporters.transporter_' 
-        default_prefix2 = 'fileconveyor.transporters.transporter_'
+        default_prefix = 'transporters.transporter_' # Not 'fileconveyor.transporters.transporter_'!
         if not transporter.startswith(default_prefix):
             alternatives.append('%s%s' % (default_prefix, transporter))
-            alternatives.append('%s%s' % (default_prefix2, transporter))
         for module_name in alternatives:
             try:
-                module = __import__(module_name, globals(), locals(), ["TRANSPORTER_CLASS"])
-            except ValueError :
-                pass
+                module = __import__(module_name, globals(), locals(), ["TRANSPORTER_CLASS"], -1)
             except ImportError:
                 pass
         if not module:
@@ -1181,24 +1168,13 @@ class Arbitrator(threading.Thread):
         return transporter_class
 
 
-def run_file_conveyor(restart=False, config=None):
-
-    if config is None :
-        _config = os.path.join( FILE_CONVEYOR_PATH , "config.xml" )
-    elif os.path.isdir( config ) :
-        _config = os.path.join( config , "config.xml" )
-    elif os.path.isfile( config ) :
-        _config = os.path.realpath( config )   
-    else :
-        _config =  os.path.join( FILE_CONVEYOR_PATH , config )   
+def run_file_conveyor(restart=False):
     try:
-    
-        print( f'Starting with config file path {_config} ', flush=True ) 
-        arbitrator = Arbitrator(_config, restart)
-    except ArbitratorInitError as e:
-        print((e.__class__.__name__, e))
-    except ArbitratorError as e:
-        print((e.__class__.__name__, e))
+        arbitrator = Arbitrator(os.path.join(FILE_CONVEYOR_PATH, "config.xml"), restart)
+    except ArbitratorInitError, e:
+        print e.__class__.__name__, e
+    except ArbitratorError, e:
+        print e.__class__.__name__, e
         del arbitrator
     else:
         t = DaemonThreadRunner(arbitrator, PID_FILE)
@@ -1218,6 +1194,6 @@ if __name__ == '__main__':
         while True and not DaemonThreadRunner.stopped_in_console:
             # Make sure there's always a PID file, even when File Conveyor
             # technically isn't running.
-            DaemonThreadRunner.write_pid_file(os.path.realpath(os.path.expanduser(PID_FILE)))
+            DaemonThreadRunner.write_pid_file(os.path.expanduser(PID_FILE))
             time.sleep(RESTART_INTERVAL)
             run_file_conveyor(restart=True)

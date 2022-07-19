@@ -1,4 +1,4 @@
-from .transporter import *
+from transporter import *
 from storages.backends.s3boto import S3BotoStorage
 
 
@@ -22,7 +22,7 @@ class TransporterS3(Transporter):
         Transporter.__init__(self, settings, callback, error_callback, parent_logger)
 
         # Fill out defaults if necessary.
-        configured_settings = Set(list(self.settings.keys()))
+        configured_settings = Set(self.settings.keys())
         if not "bucket_prefix" in configured_settings:
             self.settings["bucket_prefix"] = ""
 
@@ -36,5 +36,5 @@ class TransporterS3(Transporter):
                 "public-read",
                 self.__class__.headers
             )
-        except Exception as e:            
+        except Exception, e:            
             raise ConnectionError(e)

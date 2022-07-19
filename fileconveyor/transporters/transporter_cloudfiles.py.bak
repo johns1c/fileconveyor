@@ -1,4 +1,4 @@
-from .transporter import *
+from transporter import *
 from cumulus.storage import CloudFilesStorage
 
 
@@ -16,13 +16,13 @@ class TransporterCloudFiles(Transporter):
         Transporter.__init__(self, settings, callback, error_callback, parent_logger)
 
         # Raise exception when required settings have not been configured.
-        configured_settings = Set(list(self.settings.keys()))
+        configured_settings = Set(self.settings.keys())
         if not "username" in configured_settings:
-            raise ImpropertlyConfigured("username not set") 
+            raise ImpropertlyConfigured, "username not set" 
         if not "api_key" in configured_settings:
-            raise ImpropertlyConfigured("api_key not set") 
+            raise ImpropertlyConfigured, "api_key not set" 
         if not "container" in configured_settings:
-            raise ImpropertlyConfigured("container not set") 
+            raise ImpropertlyConfigured, "container not set" 
 
         # Map the settings to the format expected by S3Storage.
         try:
@@ -31,8 +31,8 @@ class TransporterCloudFiles(Transporter):
             self.settings["api_key"],
             self.settings["container"]
             )
-        except Exception as e:
+        except Exception, e:
             if e.__class__ == cloudfiles.errors.AuthenticationFailed:
-                raise ConnectionError("Authentication failed")
+                raise ConnectionError, "Authentication failed"
             else:
                 raise ConnectionError(e)

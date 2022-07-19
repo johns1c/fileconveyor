@@ -10,7 +10,7 @@ __date__ = "$Date$"
 __license__ = "GPL"
 
 
-from .fsmonitor import *
+from fsmonitor import *
 from FSEvents import kCFAllocatorDefault, \
                      CFRunLoopGetCurrent, \
                      kCFRunLoopDefaultMode, \
@@ -75,7 +75,7 @@ class FSMonitorFSEvents(FSMonitor):
         #FSEventStreamShow(streamRef)
         # Verify that FSEvents is able to monitor this directory.
         if streamRef is None:
-            raise MonitorError("Could not monitor %s" % path)
+            raise MonitorError, "Could not monitor %s" % path
             return None
         else:
             self.monitored_paths[path] = MonitoredPath(path, event_mask, streamRef)
@@ -102,7 +102,7 @@ class FSMonitorFSEvents(FSMonitor):
 
     def __remove_dir(self, path):
         """override of FSMonitor.__remove_dir()"""
-        if path in list(self.monitored_paths.keys()):
+        if path in self.monitored_paths.keys():
             streamRef = self.monitored_paths[path].fsmonitor_ref
             # Stop, unschedule, invalidate and release the stream refs.
             FSEventStreamStop(streamRef)
@@ -146,7 +146,7 @@ class FSMonitorFSEvents(FSMonitor):
         self.lock.release()
 
         # Stop monitoring each monitored path.
-        for path in list(self.monitored_paths.keys()):
+        for path in self.monitored_paths.keys():
             self.__remove_dir(path)
 
         # Store the latest event ID so we know where we left off.
@@ -184,7 +184,7 @@ class FSMonitorFSEvents(FSMonitor):
 
         # Ensure all monitored paths are actually being monitored. If they're
         # not yet being monitored, start doing so.
-        for path in list(self.monitored_paths.keys()):
+        for path in self.monitored_paths.keys():
             if self.monitored_paths[path].monitoring:
                 continue
             streamRef = self.monitored_paths[path].fsmonitor_ref

@@ -10,7 +10,7 @@ __date__ = "$Date$"
 __license__ = "GPL"
 
 
-from .fsmonitor import *
+from fsmonitor import *
 import time
 
 
@@ -53,7 +53,7 @@ class FSMonitorPolling(FSMonitor):
 
     def __remove_dir(self, path):
         """override of FSMonitor.__remove_dir()"""
-        if path in list(self.monitored_paths.keys()):
+        if path in self.monitored_paths.keys():
             del self.monitored_paths[path]
 
 
@@ -80,7 +80,7 @@ class FSMonitorPolling(FSMonitor):
         self.lock.release()
 
         # Stop monitoring each monitored path.
-        for path in list(self.monitored_paths.keys()):
+        for path in self.monitored_paths.keys():
             self.__remove_dir(path)
 
 
@@ -111,7 +111,7 @@ class FSMonitorPolling(FSMonitor):
 
         # Scan all paths.
         discovered_through = "polling"
-        for monitored_path in list(self.monitored_paths.keys()):
+        for monitored_path in self.monitored_paths.keys():
             # These calls to PathScanner is what ensures that FSMonitor.db
             # remains up-to-date.
             for event_path, result in self.pathscanner.scan_tree(monitored_path):

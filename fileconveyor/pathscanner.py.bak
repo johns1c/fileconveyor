@@ -28,6 +28,7 @@ __license__ = "GPL"
 import os
 import stat
 import sqlite3
+from sets import Set
 
 
 class PathScanner(object):
@@ -98,7 +99,7 @@ class PathScanner(object):
         
         Returns False if there is already data available for this path.
         """
-        assert type(path) == type('.')
+        assert type(path) == type(u'.')
 
         # Check if there really isn't any data available for this path.
         self.dbcur.execute("SELECT COUNT(filename) FROM %s WHERE path=?" % (self.table), (path,))
@@ -111,7 +112,7 @@ class PathScanner(object):
 
     def purge_path(self, path):
         """purge the metadata for a given path and all its subdirectories"""
-        assert type(path) == type('.')
+        assert type(path) == type(u'.')
 
         self.dbcur.execute("DELETE FROM %s WHERE path LIKE ?" % (self.table), (path + "%",))
         self.dbcur.execute("VACUUM %s" % (self.table))
@@ -177,7 +178,7 @@ class PathScanner(object):
         - Can detect deleted directory trees.
         """
 
-        assert type(path) == type('.')
+        assert type(path) == type(u'.')
         # Fetch the old metadata from the DB.
         self.dbcur.execute("SELECT filename, mtime FROM %s WHERE path=?" % (self.table), (path, ))
         old_files = {}
@@ -192,19 +193,19 @@ class PathScanner(object):
         scan_result = self.__scanhelper(path, old_files, new_files)
 
         # Add the created files to the DB.
-        files = set()
+        files = Set()
         for filename in scan_result["created"]:
             (filename, mtime) = new_files[filename]
             files.add((path, filename, mtime))
         self.add_files(files)
         # Update the modified files in the DB.
-        files = set()
+        files = Set()
         for filename in scan_result["modified"]:
             (filename, mtime) = new_files[filename]
             files.add((path, filename, mtime))
         self.update_files(files)
         # Remove the deleted files from the DB.
-        files = set()
+        files = Set()
         for filename in scan_result["deleted"]:
             if len(os.path.dirname(filename)):
                 realpath = path + os.sep + os.path.dirname(filename)
@@ -219,14 +220,14 @@ class PathScanner(object):
 
     def scan_tree(self, path):
         """scan a directory tree for changes"""
-        assert type(path) == type('.')
+        assert type(path) == type(u'.')
 
         # Scan the current directory for changes.
         result = self.scan(path)
 
         # Prepend the current path.
-        for key in list(result.keys()):
-            tmp = set()
+        for key in result.keys():
+            tmp = Set()
             for filename in result[key]:
                 tmp.add(path + os.sep + filename)
             result[key] = tmp
@@ -251,13 +252,13 @@ class PathScanner(object):
 
         # The dictionary that will be returned.
         result = {}
-        result["created"] = set()
-        result["deleted"] = set()
-        result["modified"] = set()
+        result["created"] = Set()
+        result["deleted"] = Set()
+        result["modified"] = Set()
 
         # Create some sets that will make our work easier.
-        old_filenames = set(list(old_files.keys()))
-        new_filenames = set(list(new_files.keys()))
+        old_filenames = Set(old_files.keys())
+        new_filenames = Set(new_files.keys())
 
         # Step 1: find newly created files.
         result["created"] = new_filenames.difference(old_filenames)
@@ -279,7 +280,7 @@ class PathScanner(object):
         # Step 4
         # If a directory was deleted, we also need to retrieve the filenames
         # and paths of the files within that subtree.
-        deleted_tree = set()
+        deleted_tree = Set()
         for deleted_file in result["deleted"]:
             (filename, mtime) = old_files[deleted_file]
             # An mtime of -1 means that this is a directory.
@@ -297,9 +298,9 @@ class PathScanner(object):
 
 if __name__ == "__main__":
     # Sample usage
-    path =  os.path.realpath( "c:/users/chris johnson/Downloads" )
+    path = "/Users/wimleers/Downloads"
     db = sqlite3.connect("pathscanner.db")
-    db.text_factory = str # This is the default, but we set it explicitly, just to be sure.
+    db.text_factory = unicode # This is the default, but we set it explicitly, just to be sure.
     ignored_dirs = ["CVS", ".svn"]
     scanner = PathScanner(db, ignored_dirs)
     # Force a rescan
@@ -311,13 +312,11 @@ if __name__ == "__main__":
 
     # Detect changes in the entire tree
     report = {}
-    report["created"] = set()
-    report["deleted"] = set()
-    report["modified"] = set()
-    
+    report["created"] = Set()
+    report["deleted"] = Set()
+    report["modified"] = Set()
     for path, result in scanner.scan_tree(path):
-        report[ "path" ] = path
         report["created"] = report["created"].union(result["created"])
         report["deleted"] = report["deleted"].union(result["deleted"])
         report["modified"] = report["modified"].union(result["modified"])
-    print( report)
+    print report

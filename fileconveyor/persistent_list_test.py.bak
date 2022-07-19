@@ -7,7 +7,7 @@ __date__ = "$Date$"
 __license__ = "GPL"
 
 
-from .persistent_list import *
+from persistent_list import *
 import os
 import os.path
 import unittest

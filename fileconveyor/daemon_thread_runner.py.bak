@@ -11,7 +11,6 @@ import os
 import os.path
 import signal
 import time
-import stat
 
 
 class DaemonThreadRunner(object):
@@ -19,23 +18,24 @@ class DaemonThreadRunner(object):
     kill the daemon (kill -TERM `cat pidfile`)"""
 
     pidfile_check_interval = 60
-    pidfile_permissions    = stat.S_IRUSR | stat.S_IWUSR
+    pidfile_permissions    = 0600
+
     stopped_in_console = False
 
     def __init__(self, thread, pidfile):
         self.thread             = thread
         self.running            = False
-        self.pidfile            = os.path.realpath(os.path.expanduser(pidfile))
-        print( pidfile) 
+        self.pidfile            = os.path.expanduser(pidfile)
         self.last_pidfile_check = 0
 
-        # Configure signal handler for valid ending events.
-        for s in signal.valid_signals() :
-            if s.name in ( 'SIGINT' , 'SIGSTP' , 'SIGTERM' , 'SIGBREAK' ) :
-                signal.signal( s , self.handle_signal )
+        # Configure signal handler.
+        signal.signal(signal.SIGINT,  self.handle_signal)
+        signal.signal(signal.SIGTSTP, self.handle_signal)
+        signal.signal(signal.SIGTERM, self.handle_signal)
+
 
     def start(self):
-        #self.write_pid_file(self.pidfile)
+        self.write_pid_file(self.pidfile)
 
         # Start the daemon thread.
         self.running = True
@@ -66,8 +66,8 @@ class DaemonThreadRunner(object):
     @classmethod
     def write_pid_file(cls, pidfile):
         pid = os.getpid()
-        with open(pidfile, 'w+') as pf:
-            pf.write(str(pid))
+        open(pidfile, 'w+').write(str(pid))
+        os.chmod(pidfile, cls.pidfile_permissions)
 
 
     def update_pid_file(self):

@@ -73,6 +73,10 @@ class Transporter(threading.Thread):
                     # Sync the file: either add/modify it, or delete it.
                     if action == Transporter.ADD_MODIFY:
                         # Sync the file.
+                        
+                        
+                        
+                        
                         f = File(open(src, "rb"))
                         if self.storage.exists(dst):
                             self.storage.delete(dst)

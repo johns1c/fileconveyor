@@ -34,7 +34,7 @@ def create_distribution(access_key_id, secret_access_key, origin, comment="", cn
         secret_access_key
     )
     d = c.create_distribution(origin, True, '', cnames, comment)
-    print("""Created distribution
+    print """Created distribution
     - domain name: %s
     - origin: %s
     - status: %s
@@ -43,14 +43,14 @@ def create_distribution(access_key_id, secret_access_key, origin, comment="", cn
 
     Over the next few minutes, the distribution will become active. This
     function will keep running until that happens.
-    """ % (d.domain_name, d.config.origin, d.status, d.config.comment, d.id))
+    """ % (d.domain_name, d.config.origin, d.status, d.config.comment, d.id)
 
     # Keep polling CloudFront every 5 seconds until the status changes from
     # "InProgress" to (hopefully) "Deployed".
-    print("\n")
+    print "\n"
     id = d.id
     while d.status == "InProgress":
         d = c.get_distribution_info(id)
-        print(".")
+        print "."
         time.sleep(5)
-    print("\nThe distribution has been deployed!")
+    print "\nThe distribution has been deployed!"

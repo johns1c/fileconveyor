@@ -1,13 +1,13 @@
-from .settings import *
+from settings import *
 import sqlite3
 import hashlib
-import pickle
+import cPickle
 import types
 
 def upgrade_persistent_data_to_v10(db):
-    sqlite3.register_converter("pickle", pickle.loads)
+    sqlite3.register_converter("pickle", cPickle.loads)
     dbcon = sqlite3.connect(db, detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
-    dbcon.text_factory = str # This is the default, but we set it explicitly, just to be sure.
+    dbcon.text_factory = unicode # This is the default, but we set it explicitly, just to be sure.
     dbcur = dbcon.cursor()
 
     # Rename the table pipeline_queue to pipeline_queue_original.
@@ -28,7 +28,7 @@ def upgrade_persistent_data_to_v10(db):
         "MONITORED_DIR_MOVED" : 0x00000008,
         "DROPPED_EVENTS"      : 0x00000016,
     }
-    for name, mask in FSMonitor.EVENTS.items():
+    for name, mask in FSMonitor.EVENTS.iteritems():
         setattr(FSMonitor, name, mask)
     FSMonitor.MERGE_EVENTS = {}
     FSMonitor.MERGE_EVENTS[FSMonitor.CREATED] = {}
@@ -56,7 +56,7 @@ def upgrade_persistent_data_to_v10(db):
 
         @classmethod
         def __hash_key(cls, key):
-            if not isinstance(key, (str,)):
+            if not isinstance(key, types.StringTypes):
                 key = str(key)
             md5 = hashlib.md5(key.encode('utf-8')).hexdigest().decode('ascii')
             return md5
@@ -74,7 +74,7 @@ def upgrade_persistent_data_to_v10(db):
             if key is None:
                 key = item
             md5 = PersistentQueue.__hash_key(key)
-            pickled_item = pickle.dumps(item, pickle.HIGHEST_PROTOCOL)
+            pickled_item = cPickle.dumps(item, cPickle.HIGHEST_PROTOCOL)
             self.dbcur.execute("INSERT INTO %s (item, key) VALUES(?, ?)" % (self.table), (sqlite3.Binary(pickled_item), md5))
             self.dbcon.commit()
 
@@ -93,7 +93,7 @@ def upgrade_persistent_data_to_v10(db):
             result = self.dbcur.fetchone()
             if result is not None:
                 id = result[0]
-                pickled_item = pickle.dumps(item, pickle.HIGHEST_PROTOCOL)
+                pickled_item = cPickle.dumps(item, cPickle.HIGHEST_PROTOCOL)
                 self.dbcur.execute("UPDATE %s SET item = ? WHERE key = ?" % (self.table), (sqlite3.Binary(pickled_item), md5))
                 self.dbcon.commit()
 

@@ -49,10 +49,10 @@ __license__ = "GPL"
 import platform
 import sqlite3
 import threading
-import queue
+import Queue
 import os
 import logging
-from .pathscanner import PathScanner
+from pathscanner import PathScanner
 
 
 # Define exceptions.
@@ -87,8 +87,8 @@ class FSMonitor(threading.Thread):
         self.ignored_dirs                    = ignored_dirs
         self.callback                        = callback
         self.lock                            = threading.Lock()
-        self.add_queue                       = queue.Queue()
-        self.remove_queue                    = queue.Queue()
+        self.add_queue                       = Queue.Queue()
+        self.remove_queue                    = Queue.Queue()
         self.die                             = False
         if parent_logger is None:
             parent_logger = ""
@@ -159,7 +159,7 @@ class FSMonitor(threading.Thread):
         # Database.
         if self.dbcur is None:
             self.dbcon = sqlite3.connect(self.dbfile)
-            self.dbcon.text_factory = str # This is the default, but we set it explicitly, just to be sure.
+            self.dbcon.text_factory = unicode # This is the default, but we set it explicitly, just to be sure.
             self.dbcur = self.dbcon.cursor()
         # PathScanner.
         if self.persistent == True and self.dbcur is not None:
@@ -201,8 +201,7 @@ class MonitoredPath(object):
 
 def __get_class_reference(modulename, classname):
     """get a reference to a class"""
-    _modulename  = 'fileconveyor.' + modulename 
-    module = __import__(_modulename, globals(), locals(), [classname])
+    module = __import__(modulename, globals(), locals(), [classname])
     class_reference = getattr(module, classname)
     return class_reference
 
@@ -234,7 +233,7 @@ def get_fsmonitor():
 
 # Make EVENTS' members directly accessible through the class dictionary. Also
 # fill the FSMonitor.EVENTNAMES dictionary.
-for name, mask in list(FSMonitor.EVENTS.items()):
+for name, mask in FSMonitor.EVENTS.iteritems():
     setattr(FSMonitor, name, mask)
     FSMonitor.EVENTNAMES[mask] = name
 
@@ -264,10 +263,10 @@ if __name__ == "__main__":
     import time
 
     def callbackfunc(monitored_path, event_path, event):
-        print(( "CALLBACK FIRED, params: monitored_path=%s', event_path='%s', event='%d'" % (monitored_path, event_path, event) ))
+        print "CALLBACK FIRED, params: monitored_path=%s', event_path='%s', event='%d'" % (monitored_path, event_path, event)
 
     fsmonitor_class = get_fsmonitor()
-    print(("Using class", fsmonitor_class))
+    print "Using class", fsmonitor_class
     fsmonitor = fsmonitor_class(callbackfunc, True)
     fsmonitor.start()
     fsmonitor.add_dir("/Users/wimleers/Downloads", FSMonitor.CREATED | FSMonitor.MODIFIED | FSMonitor.DELETED)

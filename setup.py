@@ -1,6 +1,7 @@
 # coding=utf-8
 
-# Python 2.5 compatibility.
+# upgraded for Python 3 and later tpools
+
 from __future__ import with_statement
 
 import os.path
@@ -39,9 +40,10 @@ setup(
     install_requires=[
         'setuptools',
         'cssutils',
-        'boto==1.6b',
-        'python-cloudfiles>=1.4.0',
+        'cloud-files',
+        'boto3',
         'django>=1.3',
+        'django_storages' 
         'django-cumulus>=1.0.5',
     ] + (
         ["pyinotify>0.8.0"] if "linux" in sys.platform else []

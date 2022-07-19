@@ -6,9 +6,9 @@ import subprocess
 import tempfile
 
 
-from .transporter_ftp import *
-from .transporter_s3 import *
-from .transporter_cf import *
+from transporter_ftp import *
+from transporter_s3 import *
+from transporter_cf import *
 from transporter_none import *
 
 
@@ -21,17 +21,17 @@ if __name__ == "__main__":
     logger.addHandler(h)
 
     def callback(src, dst, url, action):
-        print("""CALLBACK FIRED:
+        print """CALLBACK FIRED:
                     src='%s'
                     dst='%s'
                     url='%s'
-                    action=%d""" % (src, dst, url, action))
+                    action=%d""" % (src, dst, url, action)
 
     def error_callback(src, dst, action):
-        print("""ERROR CALLBACK FIRED:
+        print """ERROR CALLBACK FIRED:
                     src='%s'
                     dst='%s'
-                    action=%d""" % (src, dst, action))
+                    action=%d""" % (src, dst, action)
 
     # FTP
     settings = {
@@ -42,8 +42,8 @@ if __name__ == "__main__":
     }
     try:
         ftp = TransporterFTP(settings, callback, error_callback, "Test")
-    except Exception as e:
-        print("Error occurred in TransporterFTP:", e)
+    except Exception, e:
+        print "Error occurred in TransporterFTP:", e
     else:
         ftp.start()
         ftp.sync_file("transporter.py")
@@ -62,8 +62,8 @@ if __name__ == "__main__":
     }
     try:
         s3 = TransporterS3(settings, callback, error_callback, "Test")
-    except ConnectionError as e:
-        print("Error occurred in TransporterS3:", e)
+    except ConnectionError, e:
+        print "Error occurred in TransporterS3:", e
     else:
         s3.start()
         s3.sync_file("transporter.py")
@@ -83,8 +83,8 @@ if __name__ == "__main__":
     }
     try:
         cf = TransporterCF(settings, callback, error_callback, "Test")
-    except ConnectionError as e:
-        print("Error occurred in TransporterCF:", e)
+    except ConnectionError, e:
+        print "Error occurred in TransporterCF:", e
     else:
         cf.start()
         cf.sync_file("transporter.py")
@@ -103,8 +103,8 @@ if __name__ == "__main__":
     }
     try:
         none = TransporterNone(settings, callback, error_callback, "Test")
-    except ConnectionError as e:
-        print("Error occurred in TransporterNone:", e)
+    except ConnectionError, e:
+        print "Error occurred in TransporterNone:", e
     else:
         none.start()
         none.sync_file("transporter.py")

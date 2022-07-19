@@ -14,7 +14,7 @@ from xml.parsers.expat import ExpatError
 import re
 import logging
 
-from .filter import *
+from filter import *
 
 
 # Define exceptions.
@@ -37,10 +37,10 @@ class Config(object):
     @classmethod
     def __ensure_unicode(cls, string):
         # If the string is already in Unicode, there's nothing we need to do.
-        if type(string) == type('.'):
+        if type(string) == type(u'.'):
             return string
         # Otherwise, decode it from UTF-8 (which is config.xml's encoding).
-        elif type(string) == type(b'.'):
+        elif type(string) == type('.'):
             return string.decode('utf-8')
         # Finally, we may not really be receiving a string.
         else:
@@ -57,8 +57,8 @@ class Config(object):
             self.__parse_servers(root)
             self.logger.info("Parsing rules.")
             self.__parse_rules(root)
-        except ExpatError as e:
-            self.logger.error("The XML file %s is invalid; %s." % (filename,e))
+        except ExpatError, e:
+            self.logger.error("The XML file is invalid; %s." % (e))
             self.errors += 1
         return self.errors
 
@@ -75,7 +75,7 @@ class Config(object):
             try:
                 conditions = {"ignoredDirs" : self.ignored_dirs}
                 f = Filter(conditions)
-            except FilterError as e:
+            except FilterError, e:
                 message = e.message
                 if message == "":
                     message = "none"
@@ -165,7 +165,7 @@ class Config(object):
                     destination = self.__parse_destination(destination_node, label)
                     destinations[destination["server"]] = {"path" : destination["path"]}
 
-            if for_source not in self.rules:
+            if not self.rules.has_key(for_source):
                 self.rules[for_source] = []
             self.rules[for_source].append({
                 "label"           : Config.__ensure_unicode(label),
@@ -190,7 +190,7 @@ class Config(object):
         # Validate the conditions by trying to create a Filter object with it.
         try:
             f = Filter(conditions)
-        except FilterError as e:
+        except FilterError, e:
             message = e.message
             if message == "":
                 message = "none"
@@ -216,7 +216,7 @@ class Config(object):
         if destination["server"] is None:
             self.logger.error("In rule '%s': invalid destination: 'server' attribute is missing." % (rule_label))
             self.errors += 1
-        elif destination["server"] not in list(self.servers.keys()):
+        elif destination["server"] not in self.servers.keys():
             self.logger.error("In rule '%s': invalid destination: 'server' attribute references a non-existing server." % (rule_label))
             self.errors += 1
 
@@ -235,7 +235,7 @@ if __name__ == '__main__':
     # Use the Config class.
     config = Config("test")
     config.load("config.xml")
-    print(( "ignoredDirs", config.ignored_dirs ))
-    print(( "sources", config.sources ))
-    print(( "servers", config.servers ))
-    print(( "rules",   config.rules ))
+    print "ignoredDirs", config.ignored_dirs
+    print "sources", config.sources
+    print "servers", config.servers
+    print "rules",   config.rules
